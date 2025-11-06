@@ -44,23 +44,6 @@ go build -o EdgeCopilotFix cmd/edgecopilotfix/main.go
 
 ### 跨平台编译
 
-#### Windows 系统
-
-```batch
-# 编译所有平台版本
-build.bat
-```
-
-#### Linux/macOS 系统
-
-```bash
-# 给脚本执行权限
-chmod +x build.sh
-
-# 编译所有平台版本
-./build.sh
-```
-
 #### 手动指定平台编译
 
 **Windows PowerShell:**
