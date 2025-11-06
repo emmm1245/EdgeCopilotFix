@@ -99,7 +99,6 @@ GOOS=linux GOARCH=amd64 go build -o EdgeCopilotFixTool-linux-amd64 cmd/edgecopil
 ## 注意事项
 
 - 使用前会提示终止 Edge 进程，请确保保存了重要的浏览数据
-- 修复完成后需要重新启动 Edge 浏览器才能生效
 - macOS/Linux 用户需要给程序添加执行权限
 
 ## 系统要求
