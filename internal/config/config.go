@@ -4,19 +4,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"path/filepath"
+
+	"github.com/emmm1245/EdgeCopilotFix/internal/logger"
+	"github.com/emmm1245/EdgeCopilotFix/internal/paths"
 )
-
-// GetLocalStatePath 获取 Edge Local State 配置文件路径
-func GetLocalStatePath() (string, error) {
-	localAppData := os.Getenv("LOCALAPPDATA")
-	if localAppData == "" {
-		return "", fmt.Errorf("无法获取 LOCALAPPDATA 环境变量")
-	}
-
-	localStatePath := filepath.Join(localAppData, "Microsoft", "Edge", "User Data", "Local State")
-	return localStatePath, nil
-}
 
 // ReadConfig 读取配置文件
 func ReadConfig(path string) (map[string]interface{}, error) {
@@ -72,14 +63,13 @@ func SaveConfig(path string, config map[string]interface{}) error {
 	return nil
 }
 
-// FixCopilotConfig 修复 Copilot 配置的完整流程
-func FixCopilotConfig() error {
+// FixEdgeVersion 修复指定版本的 Edge Copilot 配置
+func FixEdgeVersion(edgeVersion paths.EdgeVersion) error {
+	logger.Info(fmt.Sprintf("正在修复 %s...", edgeVersion.DisplayName))
+	
 	// 获取配置文件路径
-	configPath, err := GetLocalStatePath()
-	if err != nil {
-		return err
-	}
-
+	configPath := paths.GetLocalStatePath(edgeVersion.UserDataPath)
+	
 	// 检查文件是否存在
 	if _, err := os.Stat(configPath); os.IsNotExist(err) {
 		return fmt.Errorf("配置文件不存在: %s", configPath)
@@ -92,13 +82,9 @@ func FixCopilotConfig() error {
 	}
 
 	// 检查并更新国家代码
-	modified, err := UpdateCountry(config)
+	_, err = UpdateCountry(config)
 	if err != nil {
 		return err
-	}
-
-	if !modified {
-		return fmt.Errorf("配置已经是 US，无需修改")
 	}
 
 	// 保存配置
@@ -106,6 +92,39 @@ func FixCopilotConfig() error {
 		return err
 	}
 
+	logger.Success(fmt.Sprintf("%s 修复完成！", edgeVersion.DisplayName))
 	return nil
 }
 
+// FixAllEdgeVersions 修复所有检测到的 Edge 版本
+func FixAllEdgeVersions() error {
+	// 获取所有 Edge 路径
+	edgeVersions, err := paths.GetAllEdgePaths()
+	if err != nil {
+		return err
+	}
+
+	logger.Info(fmt.Sprintf("检测到 %d 个 Edge 版本:", len(edgeVersions)))
+	for i, ev := range edgeVersions {
+		fmt.Printf("  %d. %s\n", i+1, ev.DisplayName)
+	}
+	fmt.Println()
+
+	// 逐个修复
+	successCount := 0
+	for _, ev := range edgeVersions {
+		if err := FixEdgeVersion(ev); err != nil {
+			logger.Warning(fmt.Sprintf("%s 修复失败: %v", ev.DisplayName, err))
+		} else {
+			successCount++
+		}
+		fmt.Println()
+	}
+
+	if successCount == 0 {
+		return fmt.Errorf("所有版本修复失败")
+	}
+
+	logger.Success(fmt.Sprintf("成功修复 %d/%d 个 Edge 版本", successCount, len(edgeVersions)))
+	return nil
+}

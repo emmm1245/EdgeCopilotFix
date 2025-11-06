@@ -1,3 +1,5 @@
+//go:build darwin
+
 package process
 
 import (
@@ -12,20 +14,29 @@ import (
 
 // CheckEdgeProcesses 检查是否有 Edge 进程正在运行
 func CheckEdgeProcesses() ([]string, error) {
-	cmd := exec.Command("tasklist", "/FI", "IMAGENAME eq msedge.exe", "/FO", "CSV", "/NH")
+	// 在 macOS 上，Edge 进程名称以 "Microsoft Edge" 开头
+	cmd := exec.Command("pgrep", "-l", "-f", "Microsoft Edge")
 	output, err := cmd.Output()
+	
+	// 如果没有找到进程，pgrep 会返回错误，这是正常的
 	if err != nil {
+		if exitErr, ok := err.(*exec.ExitError); ok {
+			if exitErr.ExitCode() == 1 {
+				// 退出码 1 表示没有找到进程
+				return []string{}, nil
+			}
+		}
 		return nil, fmt.Errorf("检测进程失败: %v", err)
 	}
 
 	outputStr := string(output)
 	var processes []string
 
-	// 解析输出
+	// 解析输出，每行格式为 "PID 进程名称"
 	lines := strings.Split(outputStr, "\n")
 	for _, line := range lines {
 		line = strings.TrimSpace(line)
-		if line != "" && strings.Contains(line, "msedge.exe") {
+		if line != "" {
 			processes = append(processes, line)
 		}
 	}
@@ -35,11 +46,21 @@ func CheckEdgeProcesses() ([]string, error) {
 
 // KillEdgeProcesses 终止所有 Edge 进程
 func KillEdgeProcesses() error {
-	cmd := exec.Command("taskkill", "/F", "/IM", "msedge.exe")
-	output, err := cmd.CombinedOutput()
+	// 使用 pkill 终止所有 Microsoft Edge 进程
+	cmd := exec.Command("pkill", "-f", "Microsoft Edge")
+	err := cmd.Run()
+	
+	// pkill 如果没找到进程会返回退出码 1，这不算错误
 	if err != nil {
-		return fmt.Errorf("终止进程失败: %v, 输出: %s", err, string(output))
+		if exitErr, ok := err.(*exec.ExitError); ok {
+			if exitErr.ExitCode() == 1 {
+				// 没有进程被终止，但不是错误
+				return nil
+			}
+		}
+		return fmt.Errorf("终止进程失败: %v", err)
 	}
+	
 	return nil
 }
 
