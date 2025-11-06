@@ -34,7 +34,7 @@ go build -o EdgeCopilotFix.exe ./cmd/edgecopilotfix
 ## 系统要求
 
 - Windows 10/11
-- Microsoft Edge 浏览器
+- Microsoft Edge 浏览器[正式版本]
 
 ## License
 
