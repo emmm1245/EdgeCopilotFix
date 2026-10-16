@@ -66,10 +66,10 @@ func SaveConfig(path string, config map[string]interface{}) error {
 // FixEdgeVersion 修复指定版本的 Edge Copilot 配置
 func FixEdgeVersion(edgeVersion paths.EdgeVersion) error {
 	logger.Info(fmt.Sprintf("正在修复 %s...", edgeVersion.DisplayName))
-	
+
 	// 获取配置文件路径
 	configPath := paths.GetLocalStatePath(edgeVersion.UserDataPath)
-	
+
 	// 检查文件是否存在
 	if _, err := os.Stat(configPath); os.IsNotExist(err) {
 		return fmt.Errorf("配置文件不存在: %s", configPath)
@@ -92,16 +92,16 @@ func FixEdgeVersion(edgeVersion paths.EdgeVersion) error {
 		return err
 	}
 
-	logger.Success(fmt.Sprintf("%s 修复完成！", edgeVersion.DisplayName))
+	logger.Success(fmt.Sprintf("%s 地区配置已保存", edgeVersion.DisplayName))
 	return nil
 }
 
-// FixAllEdgeVersions 修复所有检测到的 Edge 版本
-func FixAllEdgeVersions() error {
+// FixAllEdgeVersions 修复所有检测到的 Edge 版本，返回成功修复的版本
+func FixAllEdgeVersions() ([]paths.EdgeVersion, error) {
 	// 获取所有 Edge 路径
 	edgeVersions, err := paths.GetAllEdgePaths()
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	logger.Info(fmt.Sprintf("检测到 %d 个 Edge 版本:", len(edgeVersions)))
@@ -111,20 +111,20 @@ func FixAllEdgeVersions() error {
 	fmt.Println()
 
 	// 逐个修复
-	successCount := 0
+	var fixedVersions []paths.EdgeVersion
 	for _, ev := range edgeVersions {
 		if err := FixEdgeVersion(ev); err != nil {
 			logger.Warning(fmt.Sprintf("%s 修复失败: %v", ev.DisplayName, err))
 		} else {
-			successCount++
+			fixedVersions = append(fixedVersions, ev)
 		}
 		fmt.Println()
 	}
 
-	if successCount == 0 {
-		return fmt.Errorf("所有版本修复失败")
+	if len(fixedVersions) == 0 {
+		return nil, fmt.Errorf("所有版本修复失败")
 	}
 
-	logger.Success(fmt.Sprintf("成功修复 %d/%d 个 Edge 版本", successCount, len(edgeVersions)))
-	return nil
+	logger.Success(fmt.Sprintf("成功保存 %d/%d 个 Edge 版本的配置", len(fixedVersions), len(edgeVersions)))
+	return fixedVersions, nil
 }

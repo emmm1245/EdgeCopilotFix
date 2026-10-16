@@ -1,3 +1,4 @@
+// 执行地区配置修复，并使用 Copilot 兼容参数重新启动 Edge。
 package main
 
 import (
@@ -24,19 +25,40 @@ func main() {
 		waitForExit()
 		os.Exit(1)
 	}
-
-	fmt.Println()
-
-	// 第二步：修复所有检测到的 Edge 版本配置文件
-	if err := config.FixAllEdgeVersions(); err != nil {
+	if err := process.WaitForEdgeExit(); err != nil {
 		logger.Error(err.Error())
 		waitForExit()
 		os.Exit(1)
 	}
 
 	fmt.Println()
-	logger.Success("所有操作完成！")
-	logger.Info("请重新启动 Edge 浏览器以使更改生效。")
+
+	// 第二步：修复所有检测到的 Edge 版本配置文件
+	fixedVersions, err := config.FixAllEdgeVersions()
+	if err != nil {
+		logger.Error(err.Error())
+		waitForExit()
+		os.Exit(1)
+	}
+
+	fmt.Println()
+	startedCount := 0
+	for _, edgeVersion := range fixedVersions {
+		if err := process.StartEdge(edgeVersion); err != nil {
+			logger.Warning(err.Error())
+		} else {
+			startedCount++
+			logger.Success(fmt.Sprintf("已使用 Copilot 兼容参数启动 %s", edgeVersion.DisplayName))
+		}
+	}
+	logger.Info("请检查 Copilot 侧边栏是否恢复；如果没有恢复，请重新运行本工具，多重试几次该操作。")
+	logger.Info("Edge 155.0.4283.60 (正式版本) (64 位) 亲测有效。")
+	logger.Info("兼容参数仅对本次启动生效；通过普通快捷方式启动后若再次消失，请重新运行本工具。")
+	if startedCount == 0 {
+		logger.Error("未能启动任何 Edge 版本，Copilot 兼容参数尚未生效。")
+		waitForExit()
+		os.Exit(1)
+	}
 
 	waitForExit()
 }
